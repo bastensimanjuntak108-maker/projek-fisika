@@ -2,97 +2,68 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <title>Simulasi Proyektil 2D – Lempar Bola Basket</title>
+  <title>Simulasi Proyektil 2D dengan & tanpa Hambatan Udara</title>
   <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: linear-gradient(to top, #87CEEB, #e0f6ff);
+    body{
+      margin:0;
+      font-family:'Segoe UI',Arial,sans-serif;
+      background:linear-gradient(to top,#87CEEB,#e0f6ff);
     }
-    h2 {
-      text-align: center;
-      padding: 15px;
+    h2{text-align:center;padding:12px;}
+    .container{display:flex;gap:20px;justify-content:center;padding:10px 20px 30px;flex-wrap:wrap}
+    .panel{
+      background:#ffffffcc;
+      backdrop-filter:blur(6px);
+      padding:16px;
+      border-radius:14px;
+      width:280px;
+      box-shadow:0 6px 16px rgba(0,0,0,0.15)
     }
-    .container {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      padding: 10px 20px 30px;
+    .panel h3{text-align:center;margin-top:0}
+    label{display:block;margin-top:10px;font-size:14px}
+    input,select{
+      width:100%;margin-top:4px;padding:7px;border-radius:8px;border:1px solid #ccc;font-size:14px
     }
-    .panel {
-      background: #ffffffcc;
-      backdrop-filter: blur(6px);
-      padding: 18px;
-      border-radius: 14px;
-      width: 260px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    button{
+      width:100%;margin-top:14px;padding:10px;font-size:15px;border:none;border-radius:10px;background:#ff7a18;color:white;cursor:pointer
     }
-    .panel h3 {
-      margin-top: 0;
-      text-align: center;
-    }
-    label {
-      display: block;
-      margin-top: 12px;
-      font-size: 14px;
-    }
-    input {
-      width: 100%;
-      margin-top: 4px;
-      padding: 8px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-    }
-    button {
-      width: 100%;
-      margin-top: 18px;
-      padding: 10px;
-      font-size: 15px;
-      border: none;
-      border-radius: 10px;
-      background: #ff7a18;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #ff5a00;
-    }
-    #info {
-      margin-top: 15px;
-      font-size: 14px;
-      line-height: 1.4;
-      text-align: center;
-    }
-    canvas {
-      background: linear-gradient(to top, #5dbb63 0%, #5dbb63 25%, #87CEEB 25%, #87CEEB 100%);
-      border-radius: 14px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    button:hover{background:#ff5a00}
+    #info{margin-top:10px;font-size:14px;line-height:1.4;text-align:center}
+    canvas{
+      background:linear-gradient(to top,#5dbb63 0%,#5dbb63 25%,#87CEEB 25%,#87CEEB 100%);
+      border-radius:14px;box-shadow:0 6px 16px rgba(0,0,0,0.2)
     }
   </style>
 </head>
 <body>
 
-<h2>Simulasi Gerak Proyektil 2D – Lempar Bola Basket</h2>
+<h2>Simulasi Gerak Proyektil 2D (Tanpa Drag vs Dengan Drag)</h2>
 
 <div class="container">
   <div class="panel">
-    <h3>Parameter Lemparan</h3>
-
+    <h3>Parameter</h3>
     <label>Kecepatan awal v₀ (m/s)
-      <input type="number" id="v0" value="12" />
+      <input type="number" id="v0" value="15">
     </label>
-
-    <label>Sudut lemparan θ (derajat)
-      <input type="number" id="angle" value="45" />
+    <label>Sudut θ (derajat)
+      <input type="number" id="angle" value="45">
     </label>
-
+    <label>Massa m (kg)
+      <input type="number" id="mass" value="0.6" step="0.1">
+    </label>
     <label>Tinggi awal (m)
-      <input type="number" id="h0" value="2" />
+      <input type="number" id="h0" value="2">
     </label>
-
-    <button onclick="startSimulation()">🏀 Lempar Bola</button>
-
+    <label>Mode Hambatan
+      <select id="mode">
+        <option value="none">Tanpa Drag</option>
+        <option value="linear">Drag Linear</option>
+      </select>
+    </label>
+    <label>Koefisien Drag k
+      <input type="number" id="k" value="0.1" step="0.05">
+    </label>
+    <button onclick="startSimulation()">🏀 Mulai Simulasi</button>
     <div id="info"></div>
   </div>
 
@@ -100,85 +71,82 @@
 </div>
 
 <script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const g = 9.8;
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+const g=9.8;
 let animationId;
 
-function drawCourt() {
-  // Tiang
-  ctx.fillStyle = '#555';
-  ctx.fillRect(560, 120, 10, 180);
-
-  // Papan pantul
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(570, 120, 80, 50);
-  ctx.strokeStyle = '#000';
-  ctx.strokeRect(570, 120, 80, 50);
-
-  // Ring
-  ctx.strokeStyle = '#ff0000';
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.arc(610, 175, 18, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.lineWidth = 1;
+function drawCourt(){
+  ctx.fillStyle='#555';ctx.fillRect(560,120,10,180);
+  ctx.fillStyle='#fff';ctx.fillRect(570,120,80,50);
+  ctx.strokeStyle='#000';ctx.strokeRect(570,120,80,50);
+  ctx.strokeStyle='#f00';ctx.lineWidth=4;
+  ctx.beginPath();ctx.arc(610,175,18,0,Math.PI*2);ctx.stroke();ctx.lineWidth=1;
 }
 
-function startSimulation() {
+function startSimulation(){
   cancelAnimationFrame(animationId);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  const v0 = parseFloat(document.getElementById('v0').value);
-  const angle = parseFloat(document.getElementById('angle').value) * Math.PI / 180;
-  const h0 = parseFloat(document.getElementById('h0').value);
+  const v0=parseFloat(v0Input.value);
+  const ang=parseFloat(angle.value)*Math.PI/180;
+  const m=parseFloat(mass.value);
+  const h0=parseFloat(document.getElementById('h0').value);
+  const k=parseFloat(document.getElementById('k').value);
+  const mode=document.getElementById('mode').value;
 
-  const vx = v0 * Math.cos(angle);
-  const vy0 = v0 * Math.sin(angle);
+  let vx=v0*Math.cos(ang);
+  let vy=v0*Math.sin(ang);
+  let x=0,y=h0;
+  let t=0;const dt=0.02;const scale=20;
 
-  let t = 0;
-  const dt = 0.04;
-  const scale = 20;
-
-  function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  function step(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
     drawCourt();
 
-    const x = vx * t;
-    const y = h0 + vy0 * t - 0.5 * g * t * t;
-    if (y < 0) return;
+    // percepatan
+    let ax=0, ay=-g;
+    if(mode==='linear'){
+      ax += -(k/m)*vx;
+      ay += -(k/m)*vy;
+    }
 
-    const drawX = 60 + x * scale;
-    const drawY = 360 - y * scale;
-
-    // Bola basket
-    ctx.fillStyle = '#ff8c00';
-    ctx.beginPath();
-    ctx.arc(drawX, drawY, 12, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Garis bola
-    ctx.strokeStyle = '#cc5500';
-    ctx.beginPath();
-    ctx.arc(drawX, drawY, 12, 0, Math.PI);
-    ctx.stroke();
-
+    vx += ax*dt;
+    vy += ay*dt;
+    x += vx*dt;
+    y += vy*dt;
     t += dt;
-    animationId = requestAnimationFrame(animate);
+
+    if(y<0) return;
+
+    const drawX=60+x*scale;
+    const drawY=360-y*scale;
+
+    ctx.fillStyle='#ff8c00';
+    ctx.beginPath();ctx.arc(drawX,drawY,12,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#cc5500';ctx.beginPath();ctx.arc(drawX,drawY,12,0,Math.PI);ctx.stroke();
+
+    animationId=requestAnimationFrame(step);
   }
 
-  const T = (vy0 + Math.sqrt(vy0 * vy0 + 2 * g * h0)) / g;
-  const R = vx * T;
-  const H = (vy0 * vy0) / (2 * g);
+  // Analitik tanpa drag
+  const T=(v0*Math.sin(ang)+Math.sqrt(Math.pow(v0*Math.sin(ang),2)+2*g*h0))/g;
+  const R=v0*Math.cos(ang)*T;
+  const H=Math.pow(v0*Math.sin(ang),2)/(2*g);
 
-  document.getElementById('info').innerHTML =
-    `Waktu terbang: <b>${T.toFixed(2)} s</b><br>` +
-    `Jarak jangkau: <b>${R.toFixed(2)} m</b><br>` +
-    `Tinggi maksimum: <b>${H.toFixed(2)} m</b>`;
+  document.getElementById('info').innerHTML=
+    `Mode: <b>${mode==='none'?'Tanpa Drag':'Drag Linear'}</b><br>`+
+    `Waktu terbang (teori, tanpa drag): <b>${T.toFixed(2)} s</b><br>`+
+    `Jangkauan (teori): <b>${R.toFixed(2)} m</b><br>`+
+    `Tinggi maksimum (teori): <b>${H.toFixed(2)} m</b>`;
 
-  animate();
+  step();
 }
+
+// shortcut
+const v0Input=document.getElementById('v0');
+const angle=document.getElementById('angle');
+const mass=document.getElementById('mass');
 </script>
 
 </body>
