@@ -1,194 +1,124 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <title>Simulasi Proyektil 2D dengan & tanpa Hambatan Udara</title>
-  <style>
-    body{
-      margin:0;
-      font-family:'Segoe UI',Arial,sans-serif;
-      background:linear-gradient(to top,#87CEEB,#e0f6ff);
-    }
-    h2{text-align:center;padding:12px;}
-    .container{display:flex;gap:20px;justify-content:center;padding:10px 20px 30px;flex-wrap:wrap}
-    .panel{
-      background:#ffffffcc;
-      backdrop-filter:blur(6px);
-      padding:16px;
-      border-radius:14px;
-      width:280px;
-      box-shadow:0 6px 16px rgba(0,0,0,0.15)
-    }
-    .panel h3{text-align:center;margin-top:0}
-    label{display:block;margin-top:10px;font-size:14px}
-    input,select{
-      width:100%;margin-top:4px;padding:7px;border-radius:8px;border:1px solid #ccc;font-size:14px
-    }
-    button{
-      width:100%;margin-top:14px;padding:10px;font-size:15px;border:none;border-radius:10px;background:#ff7a18;color:white;cursor:pointer
-    }
-    button:hover{background:#ff5a00}
-    #info{margin-top:10px;font-size:14px;line-height:1.4;text-align:center}
-    canvas{
-      background:linear-gradient(to top,#5dbb63 0%,#5dbb63 25%,#87CEEB 25%,#87CEEB 100%);
-      border-radius:14px;box-shadow:0 6px 16px rgba(0,0,0,0.2)
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Simulasi Proyektil 2D + Grafik</title>
+<style>
+body{margin:0;font-family:Arial;background:linear-gradient(#87CEEB,#e0f6ff)}
+h2{text-align:center}
+.container{display:flex;flex-wrap:wrap;justify-content:center;gap:20px}
+.panel{background:#ffffffcc;padding:15px;border-radius:12px;width:260px}
+label{display:block;margin-top:8px}
+input,select{width:100%;padding:6px}
+button{margin-top:10px;width:100%;padding:8px;background:#ff7a18;color:#fff;border:none;border-radius:8px}
+canvas{background:#f5f5f5;border-radius:12px}
+.graphs{display:flex;gap:20px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+</style>
 </head>
 <body>
-
-<h2>Simulasi Gerak Proyektil 2D (Tanpa Drag vs Dengan Drag)</h2>
-
+<h2>Simulasi Gerak Proyektil 2D (Tanpa & Dengan Drag)</h2>
 <div class="container">
-  <div class="panel">
-    <h3>Parameter</h3>
-    <label>Kecepatan awal v₀ (m/s)
-      <input type="number" id="v0" value="15">
-    </label>
-    <label>Sudut θ (derajat)
-      <input type="number" id="angle" value="45">
-    </label>
-    <label>Massa m (kg)
-      <input type="number" id="mass" value="0.6" step="0.1">
-    </label>
-    <label>Tinggi awal (m)
-      <input type="number" id="h0" value="2">
-    </label>
-    <label>Mode Hambatan
-      <select id="mode">
-        <option value="none">Tanpa Drag</option>
-        <option value="linear">Drag Linear</option>
-      </select>
-    </label>
-    <label>Koefisien Drag k
-      <input type="number" id="k" value="0.1" step="0.05">
-    </label>
-    <button onclick="startSimulation()">🏀 Mulai Simulasi</button>
-    <div id="info"></div>
-  </div>
-
-  <canvas id="canvas" width="720" height="420"></canvas>
-
-<!-- Grafik -->
-<div style="display:flex;gap:20px;margin-top:20px;flex-wrap:wrap;justify-content:center">
-  <canvas id="graphXY" width="340" height="240"></canvas>
-  <canvas id="graphVT" width="340" height="240"></canvas>
+<div class="panel">
+<label>Kecepatan awal v0 (m/s)<input id="v0" type="number" value="15"></label>
+<label>Sudut (derajat)<input id="angle" type="number" value="45"></label>
+<label>Massa (kg)<input id="mass" type="number" value="0.6"></label>
+<label>Tinggi awal (m)<input id="h0" type="number" value="2"></label>
+<label>Mode Drag<select id="mode"><option value="none">Tanpa Drag</option><option value="linear">Drag Linear</option></select></label>
+<label>Koefisien Drag k<input id="k" type="number" value="0.1"></label>
+<button onclick="startSimulation()">Mulai</button>
+<div id="info"></div>
 </div>
+<canvas id="sim" width="700" height="400"></canvas>
+</div>
+
+<div class="graphs">
+<canvas id="graphXY" width="320" height="220"></canvas>
+<canvas id="graphVT" width="320" height="220"></canvas>
 </div>
 
 <script>
-const canvas=document.getElementById('canvas');
-const ctx=canvas.getContext('2d');
+const sim=document.getElementById('sim');
+const ctx=sim.getContext('2d');
 const g=9.8;
-let animationId;
-let dataX=[], dataY=[], dataT=[], dataV=[];
-
-function drawCourt(){
-  ctx.fillStyle='#555';ctx.fillRect(560,120,10,180);
-  ctx.fillStyle='#fff';ctx.fillRect(570,120,80,50);
-  ctx.strokeStyle='#000';ctx.strokeRect(570,120,80,50);
-  ctx.strokeStyle='#f00';ctx.lineWidth=4;
-  ctx.beginPath();ctx.arc(610,175,18,0,Math.PI*2);ctx.stroke();ctx.lineWidth=1;
-}
+let anim;
+let X=[],Y=[],T=[],V=[];
 
 function startSimulation(){
-  dataX=[]; dataY=[]; dataT=[]; dataV=[];
-  cancelAnimationFrame(animationId);
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+cancelAnimationFrame(anim);
+X=[];Y=[];T=[];V=[];
+ctx.clearRect(0,0,sim.width,sim.height);
 
-  const v0=parseFloat(v0Input.value);
-  const ang=parseFloat(angle.value)*Math.PI/180;
-  const m=parseFloat(mass.value);
-  const h0=parseFloat(document.getElementById('h0').value);
-  const k=parseFloat(document.getElementById('k').value);
-  const mode=document.getElementById('mode').value;
+const v0=parseFloat(v0.value);
+const ang=parseFloat(angle.value)*Math.PI/180;
+const m=parseFloat(mass.value);
+const h0=parseFloat(h0.value);
+const k=parseFloat(k.value);
+const mode=modeSelect.value;
 
-  let vx=v0*Math.cos(ang);
-  let vy=v0*Math.sin(ang);
-  let x=0,y=h0;
-  let t=0;const dt=0.02;const scale=20;
+let vx=v0*Math.cos(ang);
+let vy=v0*Math.sin(ang);
+let x=0,y=h0,t=0;
+const dt=0.02, scale=20;
 
-  function step(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    drawCourt();
+function step(){
+ctx.clearRect(0,0,sim.width,sim.height);
+ctx.fillStyle='#87CEEB';ctx.fillRect(0,0,sim.width,sim.height);
+ctx.fillStyle='#5dbb63';ctx.fillRect(0,300,sim.width,100);
 
-    // percepatan
-    let ax=0, ay=-g;
-    if(mode==='linear'){
-      ax += -(k/m)*vx;
-      ay += -(k/m)*vy;
-    }
+let ax=0, ay=-g;
+if(mode==='linear'){ax=-(k/m)*vx; ay=-(k/m)*vy-g;}
 
-    vx += ax*dt;
-    vy += ay*dt;
-    x += vx*dt;
-    y += vy*dt;
-    t += dt;
+vx+=ax*dt; vy+=ay*dt;
+x+=vx*dt; y+=vy*dt; t+=dt;
 
-    dataX.push(x);
-    dataY.push(y);
-    dataT.push(t);
-    dataV.push(Math.sqrt(vx*vx + vy*vy));
+X.push(x); Y.push(y); T.push(t); V.push(Math.hypot(vx,vy));
 
-    if(y<0){ drawGraphs(); return; }
+if(y<0){drawGraphs();return;}
 
-    const drawX=60+x*scale;
-    const drawY=360-y*scale;
+ctx.fillStyle='#ff8c00';
+ctx.beginPath();
+ctx.arc(50+x*scale,350-y*scale,10,0,Math.PI*2);
+ctx.fill();
 
-    ctx.fillStyle='#ff8c00';
-    ctx.beginPath();ctx.arc(drawX,drawY,12,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#cc5500';ctx.beginPath();ctx.arc(drawX,drawY,12,0,Math.PI);ctx.stroke();
-
-    animationId=requestAnimationFrame(step);
-  }
-
-  // Analitik tanpa drag
-  const T=(v0*Math.sin(ang)+Math.sqrt(Math.pow(v0*Math.sin(ang),2)+2*g*h0))/g;
-  const R=v0*Math.cos(ang)*T;
-  const H=Math.pow(v0*Math.sin(ang),2)/(2*g);
-
-  document.getElementById('info').innerHTML=
-    `Mode: <b>${mode==='none'?'Tanpa Drag':'Drag Linear'}</b><br>`+
-    `Waktu terbang (teori, tanpa drag): <b>${T.toFixed(2)} s</b><br>`+
-    `Jangkauan (teori): <b>${R.toFixed(2)} m</b><br>`+
-    `Tinggi maksimum (teori): <b>${H.toFixed(2)} m</b>`;
-
-  step();
+anim=requestAnimationFrame(step);
 }
+
+// info analitik
+const Tt=(v0*Math.sin(ang)+Math.sqrt((v0*Math.sin(ang))**2+2*g*h0))/g;
+const R=v0*Math.cos(ang)*Tt;
+const H=(v0*Math.sin(ang))**2/(2*g);
+info.innerHTML=`Waktu terbang teori: ${Tt.toFixed(2)} s<br>Jangkauan teori: ${R.toFixed(2)} m<br>Tinggi maks teori: ${H.toFixed(2)} m`;
+
+step();
+}
+
+const modeSelect=document.getElementById('mode');
 
 function drawGraphs(){
-  const gxy=document.getElementById('graphXY').getContext('2d');
-  const gvt=document.getElementById('graphVT').getContext('2d');
-
-  // Grafik x-y
-  gxy.clearRect(0,0,340,240);
-  gxy.fillText('Lintasan (x,y)',10,15);
-  gxy.beginPath();
-  for(let i=0;i<dataX.length;i++){
-    const px=20+dataX[i]*10;
-    const py=220-dataY[i]*10;
-    if(i===0) gxy.moveTo(px,py); else gxy.lineTo(px,py);
-  }
-  gxy.strokeStyle='blue'; gxy.stroke();
-
-  // Grafik v-t
-  gvt.clearRect(0,0,340,240);
-  gvt.fillText('Kecepatan vs Waktu',10,15);
-  gvt.beginPath();
-  for(let i=0;i<dataT.length;i++){
-    const px=20+dataT[i]*40;
-    const py=220-dataV[i]*5;
-    if(i===0) gvt.moveTo(px,py); else gvt.lineTo(px,py);
-  }
-  gvt.strokeStyle='red'; gvt.stroke();
+// grafik x-y
+const gxy=document.getElementById('graphXY').getContext('2d');
+gxy.clearRect(0,0,320,220);
+gxy.fillText('Lintasan x-y',10,15);
+gxy.beginPath();
+for(let i=0;i<X.length;i++){
+const px=20+X[i]*10;
+const py=200-Y[i]*10;
+i===0?gxy.moveTo(px,py):gxy.lineTo(px,py);
 }
-}
+gxy.strokeStyle='blue';gxy.stroke();
 
-// shortcut
-const v0Input=document.getElementById('v0');
-const angle=document.getElementById('angle');
-const mass=document.getElementById('mass');
+// grafik v-t
+const gvt=document.getElementById('graphVT').getContext('2d');
+gvt.clearRect(0,0,320,220);
+gvt.fillText('v vs t',10,15);
+gvt.beginPath();
+for(let i=0;i<T.length;i++){
+const px=20+T[i]*40;
+const py=200-V[i]*5;
+i===0?gvt.moveTo(px,py):gvt.lineTo(px,py);
+}
+gvt.strokeStyle='red';gvt.stroke();
+}
 </script>
-
 </body>
 </html>
