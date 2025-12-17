@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Simulasi Proyektil 2D – Lempar Bola Basket</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f5f5f5; }
+    .container { display:flex; gap:20px; padding:20px; }
+    .panel { background:white; padding:15px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+    canvas { background:#eaf4ff; border-radius:8px; }
+    label { display:block; margin-top:10px; }
+    button { margin-top:15px; padding:8px 16px; }
+  </style>
+</head>
+<body>
+
+<h2 style="padding-left:20px;">Simulasi Gerak Proyektil 2D (Tanpa Hambatan Udara)</h2>
+
+<div class="container">
+  <div class="panel">
+    <h3>Parameter</h3>
+    <label>Kecepatan awal v₀ (m/s)
+      <input type="number" id="v0" value="12" />
+    </label>
+    <label>Sudut θ (derajat)
+      <input type="number" id="angle" value="45" />
+    </label>
+    <label>Tinggi awal (m)
+      <input type="number" id="h0" value="2" />
+    </label>
+    <button onclick="startSimulation()">Lempar Bola</button>
+
+    <p id="info"></p>
+  </div>
+
+  <div class="panel">
+    <canvas id="canvas" width="600" height="400"></canvas>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const g = 9.8;
+let animationId;
+
+function startSimulation() {
+  cancelAnimationFrame(animationId);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const v0 = parseFloat(document.getElementById('v0').value);
+  const angle = parseFloat(document.getElementById('angle').value) * Math.PI / 180;
+  const h0 = parseFloat(document.getElementById('h0').value);
+
+  const vx = v0 * Math.cos(angle);
+  const vy0 = v0 * Math.sin(angle);
+
+  let t = 0;
+  const dt = 0.05;
+
+  function animate() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Gambar ring basket
+    ctx.strokeStyle = 'red';
+    ctx.beginPath();
+    ctx.arc(520, 260, 15, 0, Math.PI*2);
+    ctx.stroke();
+
+    const x = vx * t;
+    const y = h0 + vy0 * t - 0.5 * g * t * t;
+
+    if (y < 0) return;
+
+    // Skala agar muat canvas
+    const scale = 20;
+    const drawX = 50 + x * scale;
+    const drawY = 350 - y * scale;
+
+    // Gambar bola
+    ctx.fillStyle = 'orange';
+    ctx.beginPath();
+    ctx.arc(drawX, drawY, 8, 0, Math.PI*2);
+    ctx.fill();
+
+    t += dt;
+    animationId = requestAnimationFrame(animate);
+  }
+
+  // Info teori
+  const T = (vy0 + Math.sqrt(vy0*vy0 + 2*g*h0)) / g;
+  const R = vx * T;
+
+  document.getElementById('info').innerHTML =
+    `Waktu terbang ≈ ${T.toFixed(2)} s<br>Jarak jangkau ≈ ${R.toFixed(2)} m`;
+
+  animate();
+}
+</script>
+
+</body>
+</html>
