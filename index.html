@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Simulasi Proyektil 2D + Grafik</title>
+<title>Simulasi Proyektil 2D + Grafik (FIX)</title>
 <style>
 body{margin:0;font-family:Arial;background:linear-gradient(#87CEEB,#e0f6ff)}
 h2{text-align:center}
@@ -10,114 +10,168 @@ h2{text-align:center}
 .panel{background:#ffffffcc;padding:15px;border-radius:12px;width:260px}
 label{display:block;margin-top:8px}
 input,select{width:100%;padding:6px}
-button{margin-top:10px;width:100%;padding:8px;background:#ff7a18;color:#fff;border:none;border-radius:8px}
+button{margin-top:10px;width:100%;padding:8px;background:#ff7a18;color:#fff;border:none;border-radius:8px;cursor:pointer}
 canvas{background:#f5f5f5;border-radius:12px}
 .graphs{display:flex;gap:20px;justify-content:center;margin-top:20px;flex-wrap:wrap}
 </style>
 </head>
 <body>
 <h2>Simulasi Gerak Proyektil 2D (Tanpa & Dengan Drag)</h2>
+
 <div class="container">
-<div class="panel">
-<label>Kecepatan awal v0 (m/s)<input id="v0" type="number" value="15"></label>
-<label>Sudut (derajat)<input id="angle" type="number" value="45"></label>
-<label>Massa (kg)<input id="mass" type="number" value="0.6"></label>
-<label>Tinggi awal (m)<input id="h0" type="number" value="2"></label>
-<label>Mode Drag<select id="mode"><option value="none">Tanpa Drag</option><option value="linear">Drag Linear</option></select></label>
-<label>Koefisien Drag k<input id="k" type="number" value="0.1"></label>
-<button onclick="startSimulation()">Mulai</button>
-<div id="info"></div>
-</div>
-<canvas id="sim" width="700" height="400"></canvas>
+  <div class="panel">
+    <label>Kecepatan awal v₀ (m/s)
+      <input type="number" id="v0" value="15">
+    </label>
+    <label>Sudut θ (derajat)
+      <input type="number" id="angle" value="45">
+    </label>
+    <label>Massa m (kg)
+      <input type="number" id="mass" value="0.6" step="0.1">
+    </label>
+    <label>Tinggi awal h₀ (m)
+      <input type="number" id="h0" value="2">
+    </label>
+    <label>Mode Drag
+      <select id="mode">
+        <option value="none">Tanpa Drag</option>
+        <option value="linear">Drag Linear</option>
+      </select>
+    </label>
+    <label>Koefisien drag k
+      <input type="number" id="k" value="0.1" step="0.05">
+    </label>
+    <button id="startBtn">Mulai Simulasi</button>
+    <div id="info"></div>
+  </div>
+
+  <canvas id="sim" width="700" height="400"></canvas>
 </div>
 
 <div class="graphs">
-<canvas id="graphXY" width="320" height="220"></canvas>
-<canvas id="graphVT" width="320" height="220"></canvas>
+  <canvas id="graphXY" width="320" height="220"></canvas>
+  <canvas id="graphVT" width="320" height="220"></canvas>
 </div>
 
 <script>
-const sim=document.getElementById('sim');
-const ctx=sim.getContext('2d');
-const g=9.8;
-let anim;
-let X=[],Y=[],T=[],V=[];
+// ================== AMBIL ELEMEN ==================
+const sim = document.getElementById('sim');
+const ctx = sim.getContext('2d');
+const graphXY = document.getElementById('graphXY').getContext('2d');
+const graphVT = document.getElementById('graphVT').getContext('2d');
+const info = document.getElementById('info');
+
+const btn = document.getElementById('startBtn');
+
+const g = 9.8;
+let animId = null;
+let dataX=[], dataY=[], dataT=[], dataV=[];
+
+// ================== EVENT BUTTON ==================
+btn.addEventListener('click', startSimulation);
 
 function startSimulation(){
-cancelAnimationFrame(anim);
-X=[];Y=[];T=[];V=[];
-ctx.clearRect(0,0,sim.width,sim.height);
+  if(animId) cancelAnimationFrame(animId);
 
-const v0=parseFloat(v0.value);
-const ang=parseFloat(angle.value)*Math.PI/180;
-const m=parseFloat(mass.value);
-const h0=parseFloat(h0.value);
-const k=parseFloat(k.value);
-const mode=modeSelect.value;
+  dataX=[]; dataY=[]; dataT=[]; dataV=[];
+  graphXY.clearRect(0,0,320,220);
+  graphVT.clearRect(0,0,320,220);
 
-let vx=v0*Math.cos(ang);
-let vy=v0*Math.sin(ang);
-let x=0,y=h0,t=0;
-const dt=0.02, scale=20;
+  const v0 = Number(document.getElementById('v0').value);
+  const angle = Number(document.getElementById('angle').value) * Math.PI/180;
+  const m = Number(document.getElementById('mass').value);
+  const h0 = Number(document.getElementById('h0').value);
+  const mode = document.getElementById('mode').value;
+  const k = Number(document.getElementById('k').value);
 
-function step(){
-ctx.clearRect(0,0,sim.width,sim.height);
-ctx.fillStyle='#87CEEB';ctx.fillRect(0,0,sim.width,sim.height);
-ctx.fillStyle='#5dbb63';ctx.fillRect(0,300,sim.width,100);
+  let vx = v0*Math.cos(angle);
+  let vy = v0*Math.sin(angle);
+  let x = 0;
+  let y = h0;
+  let t = 0;
 
-let ax=0, ay=-g;
-if(mode==='linear'){ax=-(k/m)*vx; ay=-(k/m)*vy-g;}
+  const dt = 0.02;
+  const scale = 20;
 
-vx+=ax*dt; vy+=ay*dt;
-x+=vx*dt; y+=vy*dt; t+=dt;
+  function step(){
+    ctx.clearRect(0,0,sim.width,sim.height);
 
-X.push(x); Y.push(y); T.push(t); V.push(Math.hypot(vx,vy));
+    // background
+    ctx.fillStyle='#87CEEB';
+    ctx.fillRect(0,0,sim.width,sim.height);
+    ctx.fillStyle='#5dbb63';
+    ctx.fillRect(0,300,sim.width,100);
 
-if(y<0){drawGraphs();return;}
+    // percepatan
+    let ax = 0;
+    let ay = -g;
+    if(mode==='linear'){
+      ax += -(k/m)*vx;
+      ay += -(k/m)*vy;
+    }
 
-ctx.fillStyle='#ff8c00';
-ctx.beginPath();
-ctx.arc(50+x*scale,350-y*scale,10,0,Math.PI*2);
-ctx.fill();
+    // update gerak
+    vx += ax*dt;
+    vy += ay*dt;
+    x  += vx*dt;
+    y  += vy*dt;
+    t  += dt;
 
-anim=requestAnimationFrame(step);
+    // simpan data
+    dataX.push(x);
+    dataY.push(y);
+    dataT.push(t);
+    dataV.push(Math.sqrt(vx*vx + vy*vy));
+
+    if(y >= 0){
+      ctx.fillStyle='#ff8c00';
+      ctx.beginPath();
+      ctx.arc(50 + x*scale, 350 - y*scale, 10, 0, Math.PI*2);
+      ctx.fill();
+      animId = requestAnimationFrame(step);
+    } else {
+      drawGraphs();
+    }
+  }
+
+  // info analitik (tanpa drag)
+  const Tt = (v0*Math.sin(angle) + Math.sqrt((v0*Math.sin(angle))**2 + 2*g*h0))/g;
+  const R  = v0*Math.cos(angle) * Tt;
+  const H  = (v0*Math.sin(angle))**2/(2*g);
+
+  info.innerHTML = `Waktu terbang teori: ${Tt.toFixed(2)} s<br>`+
+                   `Jangkauan teori: ${R.toFixed(2)} m<br>`+
+                   `Tinggi maksimum teori: ${H.toFixed(2)} m`;
+
+  step();
 }
-
-// info analitik
-const Tt=(v0*Math.sin(ang)+Math.sqrt((v0*Math.sin(ang))**2+2*g*h0))/g;
-const R=v0*Math.cos(ang)*Tt;
-const H=(v0*Math.sin(ang))**2/(2*g);
-info.innerHTML=`Waktu terbang teori: ${Tt.toFixed(2)} s<br>Jangkauan teori: ${R.toFixed(2)} m<br>Tinggi maks teori: ${H.toFixed(2)} m`;
-
-step();
-}
-
-const modeSelect=document.getElementById('mode');
 
 function drawGraphs(){
-// grafik x-y
-const gxy=document.getElementById('graphXY').getContext('2d');
-gxy.clearRect(0,0,320,220);
-gxy.fillText('Lintasan x-y',10,15);
-gxy.beginPath();
-for(let i=0;i<X.length;i++){
-const px=20+X[i]*10;
-const py=200-Y[i]*10;
-i===0?gxy.moveTo(px,py):gxy.lineTo(px,py);
-}
-gxy.strokeStyle='blue';gxy.stroke();
+  // grafik x-y
+  graphXY.clearRect(0,0,320,220);
+  graphXY.fillText('Lintasan x-y',10,15);
+  graphXY.beginPath();
+  for(let i=0;i<dataX.length;i++){
+    const px = 20 + dataX[i]*10;
+    const py = 200 - dataY[i]*10;
+    if(i===0) graphXY.moveTo(px,py);
+    else graphXY.lineTo(px,py);
+  }
+  graphXY.strokeStyle='blue';
+  graphXY.stroke();
 
-// grafik v-t
-const gvt=document.getElementById('graphVT').getContext('2d');
-gvt.clearRect(0,0,320,220);
-gvt.fillText('v vs t',10,15);
-gvt.beginPath();
-for(let i=0;i<T.length;i++){
-const px=20+T[i]*40;
-const py=200-V[i]*5;
-i===0?gvt.moveTo(px,py):gvt.lineTo(px,py);
-}
-gvt.strokeStyle='red';gvt.stroke();
+  // grafik v-t
+  graphVT.clearRect(0,0,320,220);
+  graphVT.fillText('Kecepatan vs Waktu',10,15);
+  graphVT.beginPath();
+  for(let i=0;i<dataT.length;i++){
+    const px = 20 + dataT[i]*40;
+    const py = 200 - dataV[i]*5;
+    if(i===0) graphVT.moveTo(px,py);
+    else graphVT.lineTo(px,py);
+  }
+  graphVT.strokeStyle='red';
+  graphVT.stroke();
 }
 </script>
 </body>
