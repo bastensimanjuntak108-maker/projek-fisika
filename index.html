@@ -4,38 +4,99 @@
   <meta charset="UTF-8" />
   <title>Simulasi Proyektil 2D – Lempar Bola Basket</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#f5f5f5; }
-    .container { display:flex; gap:20px; padding:20px; }
-    .panel { background:white; padding:15px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
-    canvas { background:#eaf4ff; border-radius:8px; }
-    label { display:block; margin-top:10px; }
-    button { margin-top:15px; padding:8px 16px; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(to top, #87CEEB, #e0f6ff);
+    }
+    h2 {
+      text-align: center;
+      padding: 15px;
+    }
+    .container {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      padding: 10px 20px 30px;
+    }
+    .panel {
+      background: #ffffffcc;
+      backdrop-filter: blur(6px);
+      padding: 18px;
+      border-radius: 14px;
+      width: 260px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    }
+    .panel h3 {
+      margin-top: 0;
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+    input {
+      width: 100%;
+      margin-top: 4px;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    button {
+      width: 100%;
+      margin-top: 18px;
+      padding: 10px;
+      font-size: 15px;
+      border: none;
+      border-radius: 10px;
+      background: #ff7a18;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #ff5a00;
+    }
+    #info {
+      margin-top: 15px;
+      font-size: 14px;
+      line-height: 1.4;
+      text-align: center;
+    }
+    canvas {
+      background: linear-gradient(to top, #5dbb63 0%, #5dbb63 25%, #87CEEB 25%, #87CEEB 100%);
+      border-radius: 14px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
   </style>
 </head>
 <body>
 
-<h2 style="padding-left:20px;">Simulasi Gerak Proyektil 2D (Tanpa Hambatan Udara)</h2>
+<h2>Simulasi Gerak Proyektil 2D – Lempar Bola Basket</h2>
 
 <div class="container">
   <div class="panel">
-    <h3>Parameter</h3>
+    <h3>Parameter Lemparan</h3>
+
     <label>Kecepatan awal v₀ (m/s)
       <input type="number" id="v0" value="12" />
     </label>
-    <label>Sudut θ (derajat)
+
+    <label>Sudut lemparan θ (derajat)
       <input type="number" id="angle" value="45" />
     </label>
+
     <label>Tinggi awal (m)
       <input type="number" id="h0" value="2" />
     </label>
-    <button onclick="startSimulation()">Lempar Bola</button>
 
-    <p id="info"></p>
+    <button onclick="startSimulation()">🏀 Lempar Bola</button>
+
+    <div id="info"></div>
   </div>
 
-  <div class="panel">
-    <canvas id="canvas" width="600" height="400"></canvas>
-  </div>
+  <canvas id="canvas" width="720" height="420"></canvas>
 </div>
 
 <script>
@@ -44,9 +105,30 @@ const ctx = canvas.getContext('2d');
 const g = 9.8;
 let animationId;
 
+function drawCourt() {
+  // Tiang
+  ctx.fillStyle = '#555';
+  ctx.fillRect(560, 120, 10, 180);
+
+  // Papan pantul
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(570, 120, 80, 50);
+  ctx.strokeStyle = '#000';
+  ctx.strokeRect(570, 120, 80, 50);
+
+  // Ring
+  ctx.strokeStyle = '#ff0000';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(610, 175, 18, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.lineWidth = 1;
+}
+
 function startSimulation() {
   cancelAnimationFrame(animationId);
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const v0 = parseFloat(document.getElementById('v0').value);
   const angle = parseFloat(document.getElementById('angle').value) * Math.PI / 180;
@@ -56,43 +138,44 @@ function startSimulation() {
   const vy0 = v0 * Math.sin(angle);
 
   let t = 0;
-  const dt = 0.05;
+  const dt = 0.04;
+  const scale = 20;
 
   function animate() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    // Gambar ring basket
-    ctx.strokeStyle = 'red';
-    ctx.beginPath();
-    ctx.arc(520, 260, 15, 0, Math.PI*2);
-    ctx.stroke();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawCourt();
 
     const x = vx * t;
     const y = h0 + vy0 * t - 0.5 * g * t * t;
-
     if (y < 0) return;
 
-    // Skala agar muat canvas
-    const scale = 20;
-    const drawX = 50 + x * scale;
-    const drawY = 350 - y * scale;
+    const drawX = 60 + x * scale;
+    const drawY = 360 - y * scale;
 
-    // Gambar bola
-    ctx.fillStyle = 'orange';
+    // Bola basket
+    ctx.fillStyle = '#ff8c00';
     ctx.beginPath();
-    ctx.arc(drawX, drawY, 8, 0, Math.PI*2);
+    ctx.arc(drawX, drawY, 12, 0, Math.PI * 2);
     ctx.fill();
+
+    // Garis bola
+    ctx.strokeStyle = '#cc5500';
+    ctx.beginPath();
+    ctx.arc(drawX, drawY, 12, 0, Math.PI);
+    ctx.stroke();
 
     t += dt;
     animationId = requestAnimationFrame(animate);
   }
 
-  // Info teori
-  const T = (vy0 + Math.sqrt(vy0*vy0 + 2*g*h0)) / g;
+  const T = (vy0 + Math.sqrt(vy0 * vy0 + 2 * g * h0)) / g;
   const R = vx * T;
+  const H = (vy0 * vy0) / (2 * g);
 
   document.getElementById('info').innerHTML =
-    `Waktu terbang ≈ ${T.toFixed(2)} s<br>Jarak jangkau ≈ ${R.toFixed(2)} m`;
+    `Waktu terbang: <b>${T.toFixed(2)} s</b><br>` +
+    `Jarak jangkau: <b>${R.toFixed(2)} m</b><br>` +
+    `Tinggi maksimum: <b>${H.toFixed(2)} m</b>`;
 
   animate();
 }
